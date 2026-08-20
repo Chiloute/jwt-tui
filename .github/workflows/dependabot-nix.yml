@@ -1,0 +1,63 @@
+name: dependabot / nix
+
+on:
+  push:
+    branches:
+      - 'dependabot/**'
+    # `paths` is evaluated against the files touched by the pushed commits, so
+    # the regeneration commit below (nix/gomod2nix.toml only) never re-triggers
+    # this workflow. That is why this is a push and not a pull_request trigger:
+    # on pull_request, `paths` matches the whole PR diff, where go.mod always is.
+    paths:
+      - go.mod
+      - go.sum
+
+# Dependabot-triggered workflows get a read-only GITHUB_TOKEN by default;
+# this block is what allows pushing the regeneration commit.
+permissions:
+  contents: write
+
+jobs:
+  gomod2nix:
+    name: test and regenerate nix/gomod2nix.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # 1. does the update build and pass the tests?
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+      # 2. if so, regenerate the nix pin from go.mod/go.sum
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Regenerate gomod2nix.toml
+        run: nix develop --command gomod2nix --outdir ./nix
+
+      # 3. does the nix build succeed with the new pin?
+      - name: Nix build
+        run: nix build --print-build-logs
+
+      # 4. commit onto the dependabot branch if the file changed
+      - name: Commit regenerated pin
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if git diff --quiet -- nix/gomod2nix.toml; then
+            echo "nix/gomod2nix.toml already up to date"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add nix/gomod2nix.toml
+          git commit --no-verify -m 'chore(nix): regenerate gomod2nix.toml'
+          git push origin "HEAD:$BRANCH"

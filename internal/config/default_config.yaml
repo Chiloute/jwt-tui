@@ -1,0 +1,14 @@
+# jwt-tui config. Keys are comma-separated Bubble Tea key names (e.g. "ctrl+c,q").
+keybindings:
+  quit: "ctrl+c,q"
+  cycle_focus: "tab"
+  edit: "e,enter"
+  external_edit: "E"
+  docs: "d"
+  analysis: "a"
+  help_toggle: "?"
+  clear: "x"
+  copy: "y"
+  paste: "p,ctrl+v"
+  resign: "R,ctrl+r"
+  refresh: "r"
