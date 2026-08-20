@@ -3,7 +3,7 @@
   buildGoApplication,
 }: let
   pname = "jwt-tui";
-  version = "0.2.0";
+  version = "0.2.0"; # Tag
   ldflags = ["-s" "-w" "-X main.version=${version}"];
   pkg = buildGoApplication {
     inherit pname version ldflags;
