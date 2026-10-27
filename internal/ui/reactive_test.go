@@ -192,7 +192,7 @@ func TestResignAfterPayloadEdit(t *testing.T) {
 	if m.edit != jwt.EditResigned {
 		t.Fatalf("edit after re-sign = %v, want EditResigned", m.edit)
 	}
-	if label, _ := m.sigLabel(); label != "valid (self-signed)" {
+	if label, _, _ := m.sigLabel(); label != "valid (self-signed)" {
 		t.Fatalf("sig label after re-sign = %q, want %q", label, "valid (self-signed)")
 	}
 	if m.successMsg == "" {
@@ -233,7 +233,7 @@ func TestBrokenJSONMarksDesynced(t *testing.T) {
 	if !m.desynced {
 		t.Fatal("broken payload JSON did not mark the model desynced")
 	}
-	if label, _ := m.sigLabel(); label != "desynced" {
+	if label, _, _ := m.sigLabel(); label != "desynced" {
 		t.Fatalf("sig label = %q, want %q — a stale green tick is the bug here", label, "desynced")
 	}
 	if got := m.text(panelEncoded); got != sampleJWT {

@@ -126,19 +126,7 @@ func (m *model) recalcSizes() {
 		return
 	}
 
-	leftW := m.width / 2
-	rightW := m.width - leftW
-	helpH := keys.BarHeight(m.showHelp, m.width)
-	statusH := 0
-	if m.statusLine() != "" {
-		statusH = 1
-	}
-	availH := m.height - helpH - statusH
-	if availH < 4 {
-		availH = 4
-	}
-	topH := availH / 2
-	bottomH := availH - topH
+	leftW, rightW, topH, bottomH := m.grid()
 
 	border := style.PanelBorder(false)
 	setPanel := func(idx, w, h int) {
@@ -157,6 +145,19 @@ func (m *model) recalcSizes() {
 	m.docsVP.SetWidth(max(1, m.width-4))
 	m.analysisVP.SetHeight(max(1, m.height-4))
 	m.analysisVP.SetWidth(max(1, m.width-4))
+}
+
+// grid splits the screen into the 2x2 panel layout, minus the status and help bars.
+func (m model) grid() (leftW, rightW, topH, bottomH int) {
+	leftW = m.width / 2
+	rightW = m.width - leftW
+	statusH := 0
+	if m.statusLine() != "" {
+		statusH = 1
+	}
+	availH := max(4, m.height-keys.BarHeight(m.showHelp, m.width)-statusH)
+	topH = availH / 2
+	return leftW, rightW, topH, availH - topH
 }
 
 func (m *model) enterEditMode() tea.Cmd {

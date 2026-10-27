@@ -20,7 +20,7 @@ func SignToken(headerJSON, payloadJSON, keySpec string) (string, error) {
 		return "", fmt.Errorf("invalid payload JSON: %w", err)
 	}
 
-	alg := algFromHeader(header)
+	alg := AlgFromHeader(header)
 	if alg == "" {
 		return "", fmt.Errorf("no alg in the header")
 	}
@@ -65,7 +65,7 @@ func compactJSON(s string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func algFromHeader(header []byte) string {
+func AlgFromHeader(header []byte) string {
 	var h struct {
 		Alg string `json:"alg"`
 	}

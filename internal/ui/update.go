@@ -277,7 +277,7 @@ func (m *model) rebuildEncoded() {
 
 	rebuilt := headerB64 + "." + payloadB64 + "." + signature
 	m.setText(panelEncoded, rebuilt)
-	m.algorithm = algOf(header)
+	m.algorithm = jwt.AlgFromHeader([]byte(header))
 	if rebuilt == strings.TrimSpace(m.originalToken) {
 		m.edit = jwt.EditOriginal
 	} else {
@@ -289,18 +289,7 @@ func (m *model) resignToken() {
 	m.errorMsg = ""
 	m.successMsg = ""
 
-	header := m.text(panelHeader)
-	payload := m.text(panelPayload)
-	if header == "" || payload == "" {
-		m.errorMsg = "nothing to sign"
-		return
-	}
-	if !jwt.IsValidJSON(header) || !jwt.IsValidJSON(payload) {
-		m.errorMsg = "invalid JSON in header or payload"
-		return
-	}
-
-	signed, err := jwt.SignToken(header, payload, m.text(panelSecret))
+	signed, err := jwt.SignToken(m.text(panelHeader), m.text(panelPayload), m.text(panelSecret))
 	if err != nil {
 		m.errorMsg = err.Error()
 		return
@@ -383,15 +372,6 @@ func compactB64(jsonStr string) string {
 		return base64.RawURLEncoding.EncodeToString(buf.Bytes())
 	}
 	return base64.RawURLEncoding.EncodeToString([]byte(jsonStr))
-}
-
-func algOf(headerJSON string) string {
-	var h map[string]interface{}
-	if err := json.Unmarshal([]byte(headerJSON), &h); err != nil {
-		return ""
-	}
-	alg, _ := h["alg"].(string)
-	return alg
 }
 
 func jsonEqual(jsonStr, b64Str string) bool {

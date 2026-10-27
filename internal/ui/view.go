@@ -38,20 +38,7 @@ func (m model) View() tea.View {
 }
 
 func (m model) renderMainView() string {
-	leftW := m.width / 2
-	rightW := m.width - leftW
-
-	helpH := keys.BarHeight(m.showHelp, m.width)
-	statusH := 0
-	if m.statusLine() != "" {
-		statusH = 1
-	}
-	availH := m.height - helpH - statusH
-	if availH < 4 {
-		availH = 4
-	}
-	topH := availH / 2
-	bottomH := availH - topH
+	leftW, rightW, topH, bottomH := m.grid()
 
 	encoded := m.renderPanel(panelEncoded, m.encodedTitle(), leftW, topH)
 	header := m.renderPanel(panelHeader, m.panelTitle(panelHeader, "Header"), rightW, topH)
@@ -215,32 +202,18 @@ func (m model) panelTitle(fs int, name string) string {
 	return title
 }
 
-func (m model) sigSymbol() string {
+func (m model) sigLabel() (label, symbol string, st lipgloss.Style) {
 	switch {
 	case m.desynced:
-		return warningStyle.Render("⚠")
+		return "desynced", "⚠", warningStyle
 	case m.sig == jwt.SigValid && m.edit == jwt.EditResigned:
-		return warningStyle.Render("✓")
+		return "valid (self-signed)", "✓", warningStyle
 	case m.sig == jwt.SigValid:
-		return successStyle.Render("✓")
-	case m.sig == jwt.SigNoKey, m.sig == jwt.SigEmpty:
-		return mutedStyle.Render("·")
-	}
-	return errorStyle.Render("✗")
-}
-
-func (m model) sigLabel() (string, lipgloss.Style) {
-	switch {
-	case m.desynced:
-		return "desynced", warningStyle
-	case m.sig == jwt.SigValid && m.edit == jwt.EditResigned:
-		return "valid (self-signed)", warningStyle
-	case m.sig == jwt.SigValid:
-		return m.sig.String(), successStyle
+		return m.sig.String(), "✓", successStyle
 	case m.sig == jwt.SigEmpty, m.sig == jwt.SigNoKey:
-		return m.sig.String(), mutedStyle
+		return m.sig.String(), "·", mutedStyle
 	}
-	return m.sig.String(), errorStyle
+	return m.sig.String(), "✗", errorStyle
 }
 
 func (m model) encodedTitle() string {
@@ -267,7 +240,8 @@ func (m model) temporalSymbol() string {
 
 func (m model) secretTitle() string {
 	title := m.panelTitle(panelSecret, "Secret") + mutedStyle.Render(" · ") + m.secretRole()
-	return title + mutedStyle.Render(" ") + m.sigSymbol()
+	_, symbol, st := m.sigLabel()
+	return title + mutedStyle.Render(" ") + st.Render(symbol)
 }
 
 func (m model) secretRole() string {
@@ -304,7 +278,7 @@ func (m model) renderHelpBar() string {
 
 	helpStr := hm.View(keys.HelpKeyMap{Width: m.width})
 
-	label, st := m.sigLabel()
+	label, _, st := m.sigLabel()
 	sigStr := st.Render(label)
 	if len(m.findings) > 0 {
 		sigStr = m.findingsCount() + mutedStyle.Render(" · ") + sigStr
