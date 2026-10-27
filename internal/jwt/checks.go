@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type Severity int
@@ -47,10 +48,23 @@ func Analyze(rawToken, key string, res VerifyResult, now time.Time) []Finding {
 	findings = append(findings, keyFindings(key, res)...)
 	findings = append(findings, claimFindings(res, now)...)
 
+	for i := range findings {
+		findings[i].Title, findings[i].Detail = printable(findings[i].Title), printable(findings[i].Detail)
+	}
 	sort.SliceStable(findings, func(i, j int) bool {
 		return findings[i].Sev > findings[j].Sev
 	})
 	return findings
+}
+
+// printable neutralises control chars: header values end up on the user's terminal.
+func printable(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' {
+			return '\uFFFD'
+		}
+		return r
+	}, s)
 }
 
 func algFindings(res VerifyResult) []Finding {

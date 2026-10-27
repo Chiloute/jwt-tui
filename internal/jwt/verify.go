@@ -96,7 +96,7 @@ func VerifyToken(tokenString, keySpec string) VerifyResult {
 	}
 	if NeedsPublicKey(r.Alg) && resolved.Encoding == EncPlain {
 		r.Sig = SigKeyUnreadable
-		r.SigError = r.Alg + " needs a PEM, DER or JWKS key, got a plain string"
+		r.SigError = printable(r.Alg) + " needs a PEM, DER or JWKS key, got a plain string"
 		return r
 	}
 
@@ -114,6 +114,7 @@ func VerifyToken(tokenString, keySpec string) VerifyResult {
 		}
 	}
 
+	r.SigError = printable(r.SigError)
 	return r
 }
 
