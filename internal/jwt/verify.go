@@ -43,10 +43,10 @@ func VerifyToken(tokenString, keySpec string) VerifyResult {
 	}
 
 	r.Alg, _ = header["alg"].(string)
-	r.Typ, _ = header["typ"].(string)
 	r.Kid, _ = header["kid"].(string)
 
-	if _, err := base64.RawURLEncoding.DecodeString(parts[1]); err != nil {
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
 		r.Sig = SigMalformed
 		r.SigError = "payload is not valid base64url"
 		return r
@@ -59,7 +59,7 @@ func VerifyToken(tokenString, keySpec string) VerifyResult {
 	}
 	r.SigBytes = len(sigBytes)
 
-	r.Claims = parseClaims(tokenString)
+	_ = json.Unmarshal(payloadBytes, &r.Claims) // a non-JSON payload still gets its signature checked
 	r.extractTemporal()
 
 	switch {
@@ -140,20 +140,4 @@ func verifyWith(tokenString, alg, kid string, key Key) (SigState, string) {
 		return SigInvalid, "library reported the token as not valid"
 	}
 	return SigValid, ""
-}
-
-func parseClaims(tokenString string) map[string]interface{} {
-	parts := strings.Split(tokenString, ".")
-	if len(parts) != 3 {
-		return nil
-	}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil
-	}
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil
-	}
-	return claims
 }

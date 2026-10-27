@@ -32,7 +32,7 @@ func rawToken(t *testing.T, header, payload, sig string) string {
 
 func analyze(t *testing.T, token, key string, now time.Time) []Finding {
 	t.Helper()
-	return Analyze(token, key, VerifyToken(token, key), now)
+	return Analyze(token, VerifyToken(token, key), now)
 }
 
 func TestAnalyzeFlagsAlgProblems(t *testing.T) {
@@ -155,7 +155,7 @@ func TestAnalyzeSortsBySeverity(t *testing.T) {
 }
 
 func TestAnalyzeEmptyToken(t *testing.T) {
-	if got := Analyze("", "", VerifyResult{}, time.Now()); got != nil {
+	if got := Analyze("", VerifyResult{}, time.Now()); got != nil {
 		t.Fatalf("empty token produced findings: %v", codes(got))
 	}
 }
@@ -169,7 +169,7 @@ func TestUntrustedAlgCannotInjectTerminalEscapes(t *testing.T) {
 		if strings.ContainsAny(res.SigError, "\x1b\x07") {
 			t.Errorf("SigError carries raw control chars: %q", res.SigError)
 		}
-		for _, f := range Analyze(tok, jwks, res, now) {
+		for _, f := range Analyze(tok, res, now) {
 			if strings.ContainsAny(f.Title+f.Detail, "\x1b\x07") {
 				t.Errorf("finding %s carries raw control chars: %q", f.Code, f.Title)
 			}

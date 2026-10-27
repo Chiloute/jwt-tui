@@ -92,7 +92,6 @@ type VerifyResult struct {
 	Sig       SigState
 	Temporal  TemporalState
 	Alg       string
-	Typ       string
 	Kid       string
 	SigError  string
 	Claims    map[string]interface{}

@@ -21,7 +21,7 @@ func Analyze(token, keySpec string) Result {
 	return Result{
 		Info:     info,
 		Verify:   res,
-		Findings: jwt.Analyze(token, keySpec, res, time.Now()),
+		Findings: jwt.Analyze(token, res, time.Now()),
 	}
 }
 

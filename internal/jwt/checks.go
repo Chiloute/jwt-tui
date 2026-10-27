@@ -36,7 +36,7 @@ type Finding struct {
 	Detail string
 }
 
-func Analyze(rawToken, key string, res VerifyResult, now time.Time) []Finding {
+func Analyze(rawToken string, res VerifyResult, now time.Time) []Finding {
 	rawToken = strings.TrimSpace(rawToken)
 	if rawToken == "" {
 		return nil
@@ -45,7 +45,7 @@ func Analyze(rawToken, key string, res VerifyResult, now time.Time) []Finding {
 	var findings []Finding
 	findings = append(findings, algFindings(res)...)
 	findings = append(findings, encodingFindings(rawToken)...)
-	findings = append(findings, keyFindings(key, res)...)
+	findings = append(findings, keyFindings(res)...)
 	findings = append(findings, claimFindings(res, now)...)
 
 	for i := range findings {
@@ -118,7 +118,7 @@ func encodingFindings(rawToken string) []Finding {
 	return findings
 }
 
-func keyFindings(key string, res VerifyResult) []Finding {
+func keyFindings(res VerifyResult) []Finding {
 	var findings []Finding
 
 	if res.KeyTrimmed {
@@ -159,7 +159,7 @@ func keyFindings(key string, res VerifyResult) []Finding {
 	}
 
 	if AlgoFamily(res.Alg) == "HMAC" && res.KeyBytes > 0 {
-		if want, ok := hmacKeyLen(res.Alg); ok && res.KeyBytes < want {
+		if want, ok := sigLen(res.Alg); ok && res.KeyBytes < want {
 			sev := SevWarn
 			if res.KeyBytes < 8 {
 				sev = SevDanger
@@ -235,18 +235,6 @@ func sigLen(alg string) (int, bool) {
 		return 96, true
 	case "ES512":
 		return 132, true
-	}
-	return 0, false
-}
-
-func hmacKeyLen(alg string) (int, bool) {
-	switch alg {
-	case "HS256":
-		return 32, true
-	case "HS384":
-		return 48, true
-	case "HS512":
-		return 64, true
 	}
 	return 0, false
 }

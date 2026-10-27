@@ -220,7 +220,7 @@ func (m *model) refresh() {
 	m.sigError = result.SigError
 	m.claims = result.Claims
 	m.keyResult = result
-	m.findings = jwt.Analyze(enc, key, result, time.Now())
+	m.findings = jwt.Analyze(enc, result, time.Now())
 	if m.showAnalysis {
 		m.renderAnalysis()
 	}
