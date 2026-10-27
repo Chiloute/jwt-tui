@@ -1,10 +1,15 @@
 {
   pkgs,
   buildGoApplication,
-}: let
+}:
+let
   pname = "jwt-tui";
-  version = "0.2.0"; # Tag
-  ldflags = ["-s" "-w" "-X main.version=${version}"];
+  version = "0.2.1"; # Tag
+  ldflags = [
+    "-s"
+    "-w"
+    "-X main.version=${version}"
+  ];
   pkg = buildGoApplication {
     inherit pname version ldflags;
     src = ../.;
@@ -19,7 +24,8 @@
       platforms = platforms.linux;
     };
   };
-in {
+in
+{
   "${pname}" = pkg;
   default = pkg;
 }
