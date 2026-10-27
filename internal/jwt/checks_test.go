@@ -159,3 +159,20 @@ func TestAnalyzeEmptyToken(t *testing.T) {
 		t.Fatalf("empty token produced findings: %v", codes(got))
 	}
 }
+
+func TestUntrustedAlgCannotInjectTerminalEscapes(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	jwks := `{"keys":[{"kty":"RSA","kid":"a","n":"AQAB","e":"AQAB"}]}`
+	for _, alg := range []string{`RS256\u001b[31mX`, `HS256\u001b]0;PWNED\u0007`} {
+		tok := rawToken(t, `{"alg":"`+alg+`"}`, `{"sub":"x"}`, "abc")
+		res := VerifyToken(tok, jwks)
+		if strings.ContainsAny(res.SigError, "\x1b\x07") {
+			t.Errorf("SigError carries raw control chars: %q", res.SigError)
+		}
+		for _, f := range Analyze(tok, jwks, res, now) {
+			if strings.ContainsAny(f.Title+f.Detail, "\x1b\x07") {
+				t.Errorf("finding %s carries raw control chars: %q", f.Code, f.Title)
+			}
+		}
+	}
+}
