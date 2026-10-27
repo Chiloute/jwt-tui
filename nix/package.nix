@@ -9,6 +9,8 @@
     inherit pname version ldflags;
     src = ../.;
     modules = ./gomod2nix.toml;
+    # the sandbox cannot fetch the go.mod toolchain line, build with nixpkgs' Go
+    GOTOOLCHAIN = "local";
     meta = with pkgs.lib; {
       description = "Décodeur/reforgeur de JWT en TUI (HMAC, RSA, ECDSA, Ed25519)";
       homepage = "https://github.com/chiloute/jwt-tui";
