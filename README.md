@@ -97,6 +97,8 @@ jwt-tui -p -j -s @jwks.json <token>       # machine-readable output
 
 Fill the **Secret** panel to verify or re-sign. A key is given as plain text, `b64:...`,
 `@file`, or a pasted PEM / JWK Set; see the built-in reference (`d`) for the full list.
+A secret given inline with `-s` shows up in `ps` and your shell history: for a real key, use
+`-s @file` or paste it into the panel.
 Copy/paste use the terminal clipboard (OSC 52), so it works over SSH in a supporting terminal.
 
 Print mode exits `0` for a valid signature, `1` for an invalid one, `2` when the token can't
