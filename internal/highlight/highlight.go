@@ -31,6 +31,7 @@ func JSON(s string) string {
 				}
 				j++
 			}
+			j = min(j, n) // a trailing backslash skips past the end
 			str := s[i:j]
 			k := j
 			for k < n && (s[k] == ' ' || s[k] == '\t') {
