@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -107,7 +106,7 @@ func (k *jwk) rsaPublicKey() (*rsa.PublicKey, error) {
 }
 
 func (k *jwk) ecPublicKey() (*ecdsa.PublicKey, error) {
-	curve, ecdhCurve, err := ecCurve(k.Crv)
+	curve, err := ecCurve(k.Crv)
 	if err != nil {
 		return nil, err
 	}
@@ -129,15 +128,11 @@ func (k *jwk) ecPublicKey() (*ecdsa.PublicKey, error) {
 	point[0] = 4
 	new(big.Int).SetBytes(x).FillBytes(point[1 : 1+size])
 	new(big.Int).SetBytes(y).FillBytes(point[1+size:])
-	if _, err := ecdhCurve.NewPublicKey(point); err != nil {
+	pub, err := ecdsa.ParseUncompressedPublicKey(curve, point)
+	if err != nil {
 		return nil, fmt.Errorf("%w: EC point is not on curve %s", ErrKeyUnreadable, k.Crv)
 	}
-
-	return &ecdsa.PublicKey{
-		Curve: curve,
-		X:     new(big.Int).SetBytes(x),
-		Y:     new(big.Int).SetBytes(y),
-	}, nil
+	return pub, nil
 }
 
 func (k *jwk) ed25519PublicKey() (ed25519.PublicKey, error) {
@@ -155,16 +150,16 @@ func (k *jwk) ed25519PublicKey() (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(x), nil
 }
 
-func ecCurve(crv string) (elliptic.Curve, ecdh.Curve, error) {
+func ecCurve(crv string) (elliptic.Curve, error) {
 	switch crv {
 	case "P-256":
-		return elliptic.P256(), ecdh.P256(), nil
+		return elliptic.P256(), nil
 	case "P-384":
-		return elliptic.P384(), ecdh.P384(), nil
+		return elliptic.P384(), nil
 	case "P-521":
-		return elliptic.P521(), ecdh.P521(), nil
+		return elliptic.P521(), nil
 	}
-	return nil, nil, fmt.Errorf("%w: unsupported EC curve %q", ErrKeyUnreadable, crv)
+	return nil, fmt.Errorf("%w: unsupported EC curve %q", ErrKeyUnreadable, crv)
 }
 
 func (k *jwk) decode(name, value string) ([]byte, error) {
