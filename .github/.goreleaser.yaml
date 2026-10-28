@@ -22,6 +22,16 @@ archives:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
+nfpms:
+  - package_name: jwt-tui
+    formats:
+      - deb
+    maintainer: Chiloute <chiloute@proton.me>
+    description: JWT inspector and signer in the terminal
+    license: MIT
+    homepage: https://github.com/Chiloute/jwt-tui
+    bindir: /usr/bin
+
 checksum:
   name_template: checksums.txt
 
