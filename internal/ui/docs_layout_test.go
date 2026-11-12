@@ -34,7 +34,7 @@ func TestAnalysisOverlayOpens(t *testing.T) {
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m, _ = m.Update(tea.KeyPressMsg(tea.Key{Text: "a", Code: 'a'}))
 
-	if !m.(model).showAnalysis {
+	if m.(model).overlay != overlayAnalysis {
 		t.Fatal("pressing a did not open the analysis overlay")
 	}
 	// jwt.io's demo secret is 19 bytes, so there is always something to say
@@ -46,7 +46,7 @@ func TestAnalysisOverlayOpens(t *testing.T) {
 	}
 
 	m, _ = m.Update(tea.KeyPressMsg(tea.Key{Text: "a", Code: 'a'}))
-	if m.(model).showAnalysis {
+	if m.(model).overlay == overlayAnalysis {
 		t.Fatal("pressing a again did not close the overlay")
 	}
 }

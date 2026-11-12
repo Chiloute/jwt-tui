@@ -85,8 +85,14 @@ func TestFullHelpBarStaysAlignedWhenNarrow(t *testing.T) {
 			var m tea.Model = initialModel(sampleJWT, "your-256-bit-secret")
 			m, _ = m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 			m, _ = m.Update(tea.KeyPressMsg(tea.Key{Text: "?", Code: '?'}))
+			if !m.(model).help.ShowAll {
+				t.Fatalf("%dx%d: ? did not expand the help bar", w, h)
+			}
 			out := m.(model).View().Content
 
+			if lines := strings.Count(out, "\n") + 1; lines != h {
+				t.Fatalf("%dx%d: view is %d lines tall, want %d", w, h, lines, h)
+			}
 			for i, line := range strings.Split(out, "\n") {
 				if lw := lipgloss.Width(line); lw > w {
 					t.Fatalf("%dx%d: line %d is %d wide, exceeds terminal width %d: %q",

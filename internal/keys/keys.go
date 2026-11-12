@@ -61,41 +61,17 @@ func parseKeys(s string) []string {
 	return out
 }
 
-func shortList() []key.Binding {
-	return []key.Binding{
-		Keys.CycleFocus, Keys.Edit, Keys.ExternalEdit, Keys.Analysis, Keys.Docs,
-		Keys.HelpToggle, Keys.Quit,
-	}
+// Short is the always-visible help bar. Extra is appended when help is expanded.
+func Short() []key.Binding {
+	return []key.Binding{Keys.CycleFocus, Keys.Edit, Keys.ExternalEdit, Keys.Analysis, Keys.Docs, Keys.Quit}
 }
 
-func fullList() []key.Binding {
-	return []key.Binding{
-		Keys.CycleFocus, Keys.Edit, Keys.ExternalEdit, Keys.Analysis, Keys.Docs,
-		Keys.HelpToggle, Keys.Quit, Keys.Clear, Keys.Resign, Keys.Refresh,
-		Keys.Copy, Keys.Paste,
-	}
+func Extra() []key.Binding {
+	return []key.Binding{Keys.Clear, Keys.Resign, Keys.Refresh, Keys.Copy, Keys.Paste}
 }
 
-type HelpKeyMap struct {
-	Width int
-}
-
-func (k HelpKeyMap) ShortHelp() []key.Binding  { return shortList() }
-func (k HelpKeyMap) FullHelp() [][]key.Binding { return chunkByWidth(fullList(), k.Width) }
-
-type DocsKeyMap struct{}
-
-func (k DocsKeyMap) ShortHelp() []key.Binding { return overlayHelp(Keys.Docs) }
-
-func (k DocsKeyMap) FullHelp() [][]key.Binding { return [][]key.Binding{k.ShortHelp()} }
-
-type AnalysisKeyMap struct{}
-
-func (k AnalysisKeyMap) ShortHelp() []key.Binding { return overlayHelp(Keys.Analysis) }
-
-func (k AnalysisKeyMap) FullHelp() [][]key.Binding { return [][]key.Binding{k.ShortHelp()} }
-
-func overlayHelp(close key.Binding) []key.Binding {
+// Overlay is the help bar of a full-screen overlay closed by close or esc.
+func Overlay(close key.Binding) []key.Binding {
 	keys := append(close.Keys(), "esc")
 	return []key.Binding{
 		key.NewBinding(key.WithKeys(keys...), key.WithHelp(strings.Join(keys, "/"), "close")),
@@ -103,37 +79,4 @@ func overlayHelp(close key.Binding) []key.Binding {
 		key.NewBinding(key.WithKeys("k", "up"), key.WithHelp("k/↑", "scroll up")),
 		Keys.Quit,
 	}
-}
-
-func chunkByWidth(bindings []key.Binding, width int) [][]key.Binding {
-	cols := width / 26
-	if cols < 2 {
-		cols = 2
-	} else if cols > 6 {
-		cols = 6
-	}
-	perCol := (len(bindings) + cols - 1) / cols
-	var out [][]key.Binding
-	for i := 0; i < len(bindings); i += perCol {
-		end := i + perCol
-		if end > len(bindings) {
-			end = len(bindings)
-		}
-		out = append(out, bindings[i:end])
-	}
-	return out
-}
-
-func BarHeight(showAll bool, width int) int {
-	if !showAll {
-		return 1
-	}
-	groups := chunkByWidth(fullList(), width)
-	max := 0
-	for _, g := range groups {
-		if len(g) > max {
-			max = len(g)
-		}
-	}
-	return max
 }

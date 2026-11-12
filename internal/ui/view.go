@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/anotherhadi/ilovetui/bubbles"
+	"github.com/anotherhadi/ilovetui/helpbar"
 	theme "github.com/anotherhadi/ilovetui/style"
 
 	"github.com/chiloute/jwt-tui/internal/jwt"
 	"github.com/chiloute/jwt-tui/internal/keys"
-	"github.com/chiloute/jwt-tui/internal/style"
 )
 
 var (
@@ -26,9 +27,11 @@ func (m model) View() tea.View {
 	switch {
 	case m.width == 0:
 		content = ""
-	case m.showDocs:
+	case !m.size.Fits(m.width, m.height):
+		content = m.size.View(m.width, m.height)
+	case m.overlay == overlayDocs:
 		content = m.renderDocsView()
-	case m.showAnalysis:
+	case m.overlay == overlayAnalysis:
 		content = m.renderAnalysisView()
 	default:
 		content = m.renderMainView()
@@ -59,35 +62,28 @@ func (m model) renderMainView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
+func panelBorder(focused bool) lipgloss.Style {
+	if focused {
+		return theme.S.PanelFocused.Padding(0, 1)
+	}
+	return theme.S.Panel.Padding(0, 1)
+}
+
+func overlayHelp(width int, close key.Binding) string {
+	hb := helpbar.New(helpbar.WithGlobal(keys.Overlay(close)...))
+	hb.SetWidth(width)
+	return hb.View()
+}
+
 func (m model) renderDocsView() string {
-	docsBorder := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.S.Subtle).
-		Padding(0, 1)
-
-	window := docsBorder.Render(bubbles.ViewportView(&m.docsVP))
-
-	hm := bubbles.NewHelp()
-	hm.SetWidth(m.width)
-
-	helpStr := hm.View(keys.DocsKeyMap{})
-
-	return lipgloss.JoinVertical(lipgloss.Left, window, helpStr)
+	window := panelBorder(false).Render(bubbles.ViewportView(&m.docsVP))
+	return lipgloss.JoinVertical(lipgloss.Left, window, overlayHelp(m.width, keys.Keys.Docs))
 }
 
 func (m model) renderAnalysisView() string {
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.S.Subtle).
-		Padding(0, 1)
-
-	window := style.RenderWithTitle(border, m.analysisTitle(),
+	window := theme.RenderWithTitle(panelBorder(false), m.analysisTitle(),
 		bubbles.ViewportView(&m.analysisVP), m.width, m.height-2)
-
-	hm := bubbles.NewHelp()
-	hm.SetWidth(m.width)
-
-	return lipgloss.JoinVertical(lipgloss.Left, window, hm.View(keys.AnalysisKeyMap{}))
+	return lipgloss.JoinVertical(lipgloss.Left, window, overlayHelp(m.width, keys.Keys.Analysis))
 }
 
 func (m model) analysisTitle() string {
@@ -119,21 +115,21 @@ func severityStyle(sev jwt.Severity) lipgloss.Style {
 }
 
 func (m model) renderPanel(fs int, title string, w, h int) string {
-	border := style.PanelBorder(m.focus == fs)
-	content := m.renderPanelContent(fs)
-	return style.RenderWithTitle(border, title, content, w, h)
+	return theme.RenderWithTitle(panelBorder(m.focus == fs), title, m.renderPanelContent(fs), w, h)
 }
 
 func (m model) renderPanelContent(fs int) string {
 	p := &m.panels[fs]
+	// text drawn outside a viewport must be wrapped and clipped by hand or the box grows
+	fit := lipgloss.NewStyle().Width(p.vp.Width()).MaxHeight(p.vp.Height())
 	if p.editing {
 		return p.ta.View()
 	}
 	if fs == panelSecret {
-		return m.renderSecretContent()
+		return fit.Render(m.renderSecretContent())
 	}
 	if p.ta.Value() == "" {
-		return mutedStyle.Render(panelPlaceholders[fs])
+		return fit.Render(mutedStyle.Render(panelPlaceholders[fs]))
 	}
 	return bubbles.ViewportView(&p.vp)
 }
@@ -267,31 +263,24 @@ func (m model) statusLine() string {
 	return ""
 }
 
+func (m model) helpExtras() []key.Binding {
+	if m.help.ShowAll {
+		return keys.Extra()
+	}
+	return nil
+}
+
+// renderHelpBar is the helpbar with the signature state right-aligned on its last line.
 func (m model) renderHelpBar() string {
-	hm := bubbles.NewHelp()
-	hm.SetWidth(m.width)
-	hm.ShowAll = m.showHelp
-
-	helpStr := hm.View(keys.HelpKeyMap{Width: m.width})
-
 	label, _, st := m.sigLabel()
 	sigStr := st.Render(label)
 	if len(m.findings) > 0 {
 		sigStr = m.findingsCount() + mutedStyle.Render(" · ") + sigStr
 	}
 
-	lines := strings.Split(helpStr, "\n")
-	// bubbles' help component can fail to truncate to hm.SetWidth when even
-	// its ellipsis wouldn't fit (see help.Model.shouldAddItem), so clamp
-	// every line ourselves or an overflowing bar stretches the whole view.
-	for i, line := range lines {
-		if lipgloss.Width(line) > m.width {
-			lines[i] = lipgloss.NewStyle().MaxWidth(m.width).Render(line)
-		}
-	}
+	lines := strings.Split(m.help.View(m.helpExtras()...), "\n")
 	last := lines[len(lines)-1]
-	pad := m.width - lipgloss.Width(last) - lipgloss.Width(sigStr)
-	if pad >= 1 {
+	if pad := m.width - lipgloss.Width(last) - lipgloss.Width(sigStr); pad >= 1 {
 		lines[len(lines)-1] = last + strings.Repeat(" ", pad) + sigStr
 	}
 	return strings.Join(lines, "\n")

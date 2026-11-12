@@ -44,10 +44,10 @@ func (m model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.recalcSizes()
-		if m.showDocs {
+		switch m.overlay {
+		case overlayDocs:
 			m.renderDocs()
-		}
-		if m.showAnalysis {
+		case overlayAnalysis:
 			m.renderAnalysis()
 		}
 		return m, nil
@@ -72,32 +72,8 @@ func (m model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.showDocs {
-			switch {
-			case key.Matches(msg, keys.Keys.Quit):
-				return m, tea.Quit
-			case key.Matches(msg, keys.Keys.Docs), msg.String() == "esc":
-				m.showDocs = false
-				return m, nil
-			default:
-				var cmd tea.Cmd
-				m.docsVP, cmd = m.docsVP.Update(msg)
-				return m, cmd
-			}
-		}
-
-		if m.showAnalysis {
-			switch {
-			case key.Matches(msg, keys.Keys.Quit):
-				return m, tea.Quit
-			case key.Matches(msg, keys.Keys.Analysis), msg.String() == "esc":
-				m.showAnalysis = false
-				return m, nil
-			default:
-				var cmd tea.Cmd
-				m.analysisVP, cmd = m.analysisVP.Update(msg)
-				return m, cmd
-			}
+		if m.overlay != overlayNone {
+			return m.handleOverlayKey(msg)
 		}
 
 		if m.panels[m.focus].editing {
@@ -126,6 +102,24 @@ func (m model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+}
+
+// handleOverlayKey drives whichever full-screen overlay is open: quit, close, or scroll.
+func (m model) handleOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	closeKey, vp := keys.Keys.Docs, &m.docsVP
+	if m.overlay == overlayAnalysis {
+		closeKey, vp = keys.Keys.Analysis, &m.analysisVP
+	}
+	switch {
+	case key.Matches(msg, keys.Keys.Quit):
+		return m, tea.Quit
+	case key.Matches(msg, closeKey), msg.String() == "esc":
+		m.overlay = overlayNone
+		return m, nil
+	}
+	var cmd tea.Cmd
+	*vp, cmd = vp.Update(msg)
+	return m, cmd
 }
 
 func (m model) handleViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -174,19 +168,19 @@ func (m model) handleViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, keys.Keys.HelpToggle):
-		m.showHelp = !m.showHelp
+		m.help.ShowAll = !m.help.ShowAll
 		m.recalcSizes()
 		return m, nil
 
 	case key.Matches(msg, keys.Keys.Docs):
-		m.showHelp = false
-		m.showDocs = true
+		m.help.ShowAll = false
+		m.overlay = overlayDocs
 		m.renderDocs()
 		return m, nil
 
 	case key.Matches(msg, keys.Keys.Analysis):
-		m.showHelp = false
-		m.showAnalysis = true
+		m.help.ShowAll = false
+		m.overlay = overlayAnalysis
 		m.renderAnalysis()
 		return m, nil
 
@@ -220,7 +214,7 @@ func (m *model) refresh() {
 	m.claims = result.Claims
 	m.keyResult = result
 	m.findings = jwt.Analyze(enc, result, time.Now())
-	if m.showAnalysis {
+	if m.overlay == overlayAnalysis {
 		m.renderAnalysis()
 	}
 	m.recalcSizes()

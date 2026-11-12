@@ -9,11 +9,10 @@ Packages of `jwt-tui` and the path of a keystroke through them.
 | `cmd/jwt-tui` | Flags, config loading, print mode. `version` is set at build time with `-ldflags "-X main.version=..."`. |
 | `internal/jwt` | Parsing, key resolution, verification, signing, claim checks. No TUI dependency. |
 | `internal/report` | Print mode: runs `jwt` on one token and renders text or JSON, computes the exit code. |
-| `internal/ui` | Bubble Tea model, update loop, views, external editor. Embeds `docs.md`, the in-app reference. |
+| `internal/ui` | Bubble Tea model, update loop, views, external editor. Embeds `docs.md`, the in-app reference. Borders, help bar, toasts and the minimum-size screen come from `ilovetui`. |
 | `internal/config` | YAML config. Only keybindings. Defaults come from the embedded `default_config.yaml`. |
 | `internal/keys` | Turns the config into `key.Binding` values and help text. |
 | `internal/highlight` | Colors JSON and the three-part token. |
-| `internal/style` | Panel borders and titles. |
 
 ```mermaid
 flowchart LR
@@ -25,14 +24,13 @@ flowchart LR
     ui --> jwt["internal/jwt"]
     report --> jwt
     ui --> highlight["internal/highlight"]
-    ui --> style["internal/style"]
 ```
 
 `--print` and `--json` never reach `internal/ui`: `main` calls `report.Analyze` and exits.
 
 ## Panels
 
-The TUI has four panels, indexed `panelEncoded`, `panelHeader`, `panelPayload`, `panelSecret` (`internal/ui/model.go`). Each holds a textarea and a viewport. A status bar shows signature state, temporal state and edit state (`original`, `modified`, `re-signed`).
+The TUI has four panels, indexed `panelEncoded`, `panelHeader`, `panelPayload`, `panelSecret` (`internal/ui/model.go`). Each holds a textarea and a viewport. The help bar shows signature state and the panel titles show temporal and edit state (`original`, `modified`, `re-signed`). Transient events (invalid token, re-sign result, editor errors) are toasts in the bottom-right corner.
 
 ## Flow of a change
 

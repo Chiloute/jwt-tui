@@ -7,12 +7,14 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/anotherhadi/ilovetui/bubbles"
+	"github.com/anotherhadi/ilovetui/helpbar"
+	"github.com/anotherhadi/ilovetui/minsize"
 	"github.com/anotherhadi/ilovetui/notification"
+	theme "github.com/anotherhadi/ilovetui/style"
 
 	"github.com/chiloute/jwt-tui/internal/highlight"
 	"github.com/chiloute/jwt-tui/internal/jwt"
 	"github.com/chiloute/jwt-tui/internal/keys"
-	"github.com/chiloute/jwt-tui/internal/style"
 )
 
 //go:embed docs.md
@@ -23,6 +25,12 @@ const (
 	panelHeader
 	panelPayload
 	panelSecret
+)
+
+const (
+	overlayNone = iota
+	overlayDocs
+	overlayAnalysis
 )
 
 var panelPlaceholders = [4]string{
@@ -63,13 +71,13 @@ type model struct {
 
 	pendingPastePanel int
 
-	showHelp     bool
-	showDocs     bool
+	help    helpbar.Model
+	size    minsize.Model
+	overlay int
+
 	docsVP       viewport.Model
 	docsRendered string
 	docsWidth    int
-
-	showAnalysis bool
 	analysisVP   viewport.Model
 
 	width, height int
@@ -80,6 +88,9 @@ func initialModel(token, secret string) model {
 		focus: panelEncoded,
 		edit:  jwt.EditOriginal,
 		notif: notification.New(notification.WithPosition(notification.BottomRight)),
+		help:  helpbar.New(helpbar.WithToggle(keys.Keys.HelpToggle), helpbar.WithGlobal(keys.Short()...)),
+		// shortcut: floor matches the smallest size the layout tests cover; raise it together with them
+		size: minsize.New(20, 12),
 	}
 	for i := range m.panels {
 		ta := bubbles.NewTextarea(false)
@@ -129,11 +140,13 @@ func (m *model) recalcSizes() {
 		return
 	}
 
+	m.help.SetWidth(m.width)
 	leftW, rightW, topH, bottomH := m.grid()
 
-	border := style.PanelBorder(false)
+	frame := panelBorder(false).GetHorizontalFrameSize()
 	setPanel := func(idx, w, h int) {
-		cw, ch := style.PanelContentSize(border, w, h)
+		// one row goes to the title line drawn above the box, one to the bottom border
+		cw, ch := max(1, w-frame), max(1, theme.ContentHeight(h))
 		m.panels[idx].vp.SetWidth(cw)
 		m.panels[idx].vp.SetHeight(ch)
 		m.panels[idx].ta.SetWidth(cw)
@@ -158,7 +171,7 @@ func (m model) grid() (leftW, rightW, topH, bottomH int) {
 	if m.statusLine() != "" {
 		statusH = 1
 	}
-	availH := max(4, m.height-keys.BarHeight(m.showHelp, m.width)-statusH)
+	availH := max(4, m.height-m.help.Height(m.helpExtras()...)-statusH)
 	topH = availH / 2
 	return leftW, rightW, topH, availH - topH
 }
