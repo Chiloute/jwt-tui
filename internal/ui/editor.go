@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/anotherhadi/ilovetui/notification"
 )
 
 type editorFinishedMsg struct {
@@ -37,9 +38,8 @@ func (m *model) openInEditor() tea.Cmd {
 
 	path, err := m.writeEditorFile(panel)
 	if err != nil {
-		m.errorMsg = "editor: " + err.Error()
-		m.recalcSizes()
-		return autoClearStatus()
+		m.notify("editor", "Editor", err.Error(), notification.Error)
+		return nil
 	}
 
 	argv := append(editorArgv(), path)
@@ -72,13 +72,13 @@ func (m *model) applyEditorResult(msg editorFinishedMsg) {
 	defer os.Remove(msg.path)
 
 	if msg.err != nil {
-		m.errorMsg = "editor: " + msg.err.Error()
+		m.notify("editor", "Editor", msg.err.Error(), notification.Error)
 		return
 	}
 
 	data, err := os.ReadFile(msg.path)
 	if err != nil {
-		m.errorMsg = "editor: " + err.Error()
+		m.notify("editor", "Editor", err.Error(), notification.Error)
 		return
 	}
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/anotherhadi/ilovetui/notification"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
 	"github.com/chiloute/jwt-tui/internal/jwt"
@@ -107,8 +108,8 @@ func TestAsymmetricVerifiesWithoutRefresh(t *testing.T) {
 	if m.sig != jwt.SigValid {
 		t.Fatalf("sig with the matching public key = %v (%s), want SigValid", m.sig, m.sigError)
 	}
-	if m.errorMsg != "" {
-		t.Fatalf("unexpected error message: %q", m.errorMsg)
+	if toasts := queuedToasts(&m); len(toasts) != 0 {
+		t.Fatalf("unexpected toasts: %+v", toasts)
 	}
 }
 
@@ -195,8 +196,8 @@ func TestResignAfterPayloadEdit(t *testing.T) {
 	if label, _, _ := m.sigLabel(); label != "valid (self-signed)" {
 		t.Fatalf("sig label after re-sign = %q, want %q", label, "valid (self-signed)")
 	}
-	if m.successMsg == "" {
-		t.Fatalf("expected a re-sign success message")
+	if toasts := queuedToasts(&m); len(toasts) == 0 || toasts[len(toasts)-1].Kind != notification.Success {
+		t.Fatalf("expected a re-sign success toast, got %+v", toasts)
 	}
 	if !strings.Contains(m.text(panelPayload), "Jane Doe") {
 		t.Fatalf("payload lost the edit: %q", m.text(panelPayload))

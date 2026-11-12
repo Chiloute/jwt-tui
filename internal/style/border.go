@@ -4,13 +4,13 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	ilovetui "github.com/anotherhadi/ilovetui"
+	theme "github.com/anotherhadi/ilovetui/style"
 )
 
 func PanelBorder(focused bool) lipgloss.Style {
-	base := ilovetui.S.Panel
+	base := theme.S.Panel
 	if focused {
-		base = ilovetui.S.PanelFocused
+		base = theme.S.PanelFocused
 	}
 	return base.Padding(0, 1)
 }

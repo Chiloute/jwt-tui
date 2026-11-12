@@ -119,8 +119,8 @@ func TestExternalEditorFailureKeepsPanel(t *testing.T) {
 	if m.text(panelEncoded) != sampleJWT {
 		t.Fatalf("token = %q, want it untouched after an editor failure", m.text(panelEncoded))
 	}
-	if !strings.HasPrefix(m.errorMsg, "editor:") {
-		t.Fatalf("errorMsg = %q, want an editor: prefix", m.errorMsg)
+	if toasts := queuedToasts(&m); len(toasts) != 1 || toasts[0].Title != "Editor" {
+		t.Fatalf("toasts = %+v, want one Editor error toast", toasts)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("temp file %s not removed", path)

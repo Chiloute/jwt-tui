@@ -6,7 +6,8 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	ilovetui "github.com/anotherhadi/ilovetui"
+	"github.com/anotherhadi/ilovetui/bubbles"
+	"github.com/anotherhadi/ilovetui/notification"
 
 	"github.com/chiloute/jwt-tui/internal/highlight"
 	"github.com/chiloute/jwt-tui/internal/jwt"
@@ -44,8 +45,9 @@ type model struct {
 	originalToken string
 	algorithm     string
 
-	errorMsg   string
-	successMsg string
+	notif notification.Model
+	// toasts queued by *model helpers; Update drains them into tea.Cmds.
+	pending []tea.Cmd
 
 	sig      jwt.SigState
 	temporal jwt.TemporalState
@@ -77,17 +79,18 @@ func initialModel(token, secret string) model {
 	m := model{
 		focus: panelEncoded,
 		edit:  jwt.EditOriginal,
+		notif: notification.New(notification.WithPosition(notification.BottomRight)),
 	}
 	for i := range m.panels {
-		ta := ilovetui.NewTextarea(false)
-		vp := ilovetui.NewViewport()
+		ta := bubbles.NewTextarea(false)
+		vp := bubbles.NewViewport()
 		vp.SoftWrap = true
 		m.panels[i].ta = ta
 		m.panels[i].vp = vp
 	}
-	m.docsVP = ilovetui.NewViewport()
+	m.docsVP = bubbles.NewViewport()
 	m.docsVP.SoftWrap = true
-	m.analysisVP = ilovetui.NewViewport()
+	m.analysisVP = bubbles.NewViewport()
 	m.analysisVP.SoftWrap = true
 
 	if secret != "" {
@@ -183,4 +186,10 @@ func (m *model) clearPanel() {
 	p.ta.Blur()
 	m.setText(m.focus, "")
 	m.onContentChange()
+}
+
+// notify queues a toast. id makes repeated events (e.g. one per keystroke)
+// replace the previous toast instead of stacking.
+func (m *model) notify(id, title, msg string, kind notification.Kind) {
+	m.pending = append(m.pending, notification.Show(title, msg, kind, notification.WithID(id)))
 }

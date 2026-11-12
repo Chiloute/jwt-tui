@@ -11,21 +11,14 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/glamour/v2"
 	"charm.land/lipgloss/v2"
-	ilovetui "github.com/anotherhadi/ilovetui"
+	"github.com/anotherhadi/ilovetui/notification"
+	theme "github.com/anotherhadi/ilovetui/style"
 
 	"github.com/chiloute/jwt-tui/internal/jwt"
 	"github.com/chiloute/jwt-tui/internal/keys"
 )
 
-type clearStatusMsg struct{}
-
 type temporalTickMsg struct{}
-
-func autoClearStatus() tea.Cmd {
-	return tea.Tick(3*time.Second, func(_ time.Time) tea.Msg {
-		return clearStatusMsg{}
-	})
-}
 
 func temporalTick() tea.Cmd {
 	return tea.Tick(time.Second, func(_ time.Time) tea.Msg {
@@ -33,7 +26,19 @@ func temporalTick() tea.Cmd {
 	})
 }
 
+// Update routes msg to the toast stack, then to the app, and flushes any
+// toasts the app queued while handling it.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var notifCmd tea.Cmd
+	m.notif, notifCmd = m.notif.Update(msg)
+	next, cmd := m.update(msg)
+	nm := next.(model)
+	cmds := append([]tea.Cmd{notifCmd, cmd}, nm.pending...)
+	nm.pending = nil
+	return nm, tea.Batch(cmds...)
+}
+
+func (m model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -57,12 +62,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case clearStatusMsg:
-		m.errorMsg = ""
-		m.successMsg = ""
-		m.recalcSizes()
-		return m, nil
-
 	case temporalTickMsg:
 		m.temporal = jwt.EvaluateTemporal(m.claims, time.Now()).State
 		return m, temporalTick()
@@ -70,7 +69,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editorFinishedMsg:
 		m.applyEditorResult(msg)
 		m.recalcSizes()
-		return m, autoClearStatus()
+		return m, nil
 
 	case tea.KeyPressMsg:
 		if m.showDocs {
@@ -162,7 +161,7 @@ func (m model) handleViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, keys.Keys.Resign):
 		m.resignToken()
 		m.refresh()
-		return m, autoClearStatus()
+		return m, nil
 
 	case key.Matches(msg, keys.Keys.Refresh):
 		switch m.focus {
@@ -172,7 +171,7 @@ func (m model) handleViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.rebuildEncoded()
 		}
 		m.refresh()
-		return m, autoClearStatus()
+		return m, nil
 
 	case key.Matches(msg, keys.Keys.HelpToggle):
 		m.showHelp = !m.showHelp
@@ -228,15 +227,13 @@ func (m *model) refresh() {
 }
 
 func (m *model) decodeFromEncoded() {
-	m.errorMsg = ""
-	m.successMsg = ""
 	m.desynced = false
 	m.edit = jwt.EditOriginal
 
 	info, err := jwt.ParseJWT(m.text(panelEncoded))
 	if err != nil {
 		if m.text(panelEncoded) != "" {
-			m.errorMsg = err.Error()
+			m.notify("decode", "Invalid token", err.Error(), notification.Error)
 		}
 		m.setText(panelHeader, "")
 		m.setText(panelPayload, "")
@@ -252,14 +249,11 @@ func (m *model) decodeFromEncoded() {
 }
 
 func (m *model) rebuildEncoded() {
-	m.errorMsg = ""
-	m.successMsg = ""
-
 	header := m.text(panelHeader)
 	payload := m.text(panelPayload)
 	if header == "" || payload == "" || !jwt.IsValidJSON(header) || !jwt.IsValidJSON(payload) {
 		m.desynced = true
-		m.errorMsg = "invalid JSON in header or payload"
+		m.notify("decode", "Desynced", "invalid JSON in header or payload", notification.Error)
 		return
 	}
 	m.desynced = false
@@ -286,18 +280,15 @@ func (m *model) rebuildEncoded() {
 }
 
 func (m *model) resignToken() {
-	m.errorMsg = ""
-	m.successMsg = ""
-
 	signed, err := jwt.SignToken(m.text(panelHeader), m.text(panelPayload), m.text(panelSecret))
 	if err != nil {
-		m.errorMsg = err.Error()
+		m.notify("sign", "Re-sign failed", err.Error(), notification.Error)
 		return
 	}
 
 	m.setText(panelEncoded, signed)
 	m.edit = jwt.EditResigned
-	m.successMsg = "token re-signed"
+	m.notify("sign", "Re-signed", "token re-signed with the current key", notification.Success)
 }
 
 func (m *model) renderDocs() {
@@ -313,7 +304,7 @@ func (m *model) renderDocs() {
 	}
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStyles(ilovetui.GlamourStyleConfig()),
+		glamour.WithStyles(theme.GlamourStyleConfig()),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
@@ -354,7 +345,7 @@ func (m *model) renderAnalysis() {
 		b.WriteString(lipgloss.NewStyle().Bold(true).Render(f.Title))
 		b.WriteString(mutedStyle.Render("  " + f.Code))
 		b.WriteString("\n")
-		b.WriteString(lipgloss.NewStyle().Width(width).Foreground(ilovetui.S.Subtle).Render(f.Detail))
+		b.WriteString(lipgloss.NewStyle().Width(width).Foreground(theme.S.Subtle).Render(f.Detail))
 	}
 
 	m.analysisVP.SetContent(b.String())

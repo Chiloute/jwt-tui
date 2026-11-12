@@ -6,7 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	ilovetui "github.com/anotherhadi/ilovetui"
+	"github.com/anotherhadi/ilovetui/bubbles"
+	theme "github.com/anotherhadi/ilovetui/style"
 
 	"github.com/chiloute/jwt-tui/internal/jwt"
 	"github.com/chiloute/jwt-tui/internal/keys"
@@ -14,10 +15,10 @@ import (
 )
 
 var (
-	mutedStyle   = lipgloss.NewStyle().Foreground(ilovetui.S.Muted)
-	successStyle = lipgloss.NewStyle().Foreground(ilovetui.S.Success).Bold(true)
-	warningStyle = lipgloss.NewStyle().Foreground(ilovetui.S.Warning).Bold(true)
-	errorStyle   = lipgloss.NewStyle().Foreground(ilovetui.S.Error).Bold(true)
+	mutedStyle   = lipgloss.NewStyle().Foreground(theme.S.Muted)
+	successStyle = lipgloss.NewStyle().Foreground(theme.S.Success).Bold(true)
+	warningStyle = lipgloss.NewStyle().Foreground(theme.S.Warning).Bold(true)
+	errorStyle   = lipgloss.NewStyle().Foreground(theme.S.Error).Bold(true)
 )
 
 func (m model) View() tea.View {
@@ -32,7 +33,7 @@ func (m model) View() tea.View {
 	default:
 		content = m.renderMainView()
 	}
-	v := tea.NewView(content)
+	v := tea.NewView(m.notif.Render(content))
 	v.AltScreen = true
 	return v
 }
@@ -61,12 +62,12 @@ func (m model) renderMainView() string {
 func (m model) renderDocsView() string {
 	docsBorder := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ilovetui.S.Subtle).
+		BorderForeground(theme.S.Subtle).
 		Padding(0, 1)
 
-	window := docsBorder.Render(ilovetui.ViewportView(&m.docsVP))
+	window := docsBorder.Render(bubbles.ViewportView(&m.docsVP))
 
-	hm := ilovetui.NewHelp()
+	hm := bubbles.NewHelp()
 	hm.SetWidth(m.width)
 
 	helpStr := hm.View(keys.DocsKeyMap{})
@@ -77,20 +78,20 @@ func (m model) renderDocsView() string {
 func (m model) renderAnalysisView() string {
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(ilovetui.S.Subtle).
+		BorderForeground(theme.S.Subtle).
 		Padding(0, 1)
 
 	window := style.RenderWithTitle(border, m.analysisTitle(),
-		ilovetui.ViewportView(&m.analysisVP), m.width, m.height-2)
+		bubbles.ViewportView(&m.analysisVP), m.width, m.height-2)
 
-	hm := ilovetui.NewHelp()
+	hm := bubbles.NewHelp()
 	hm.SetWidth(m.width)
 
 	return lipgloss.JoinVertical(lipgloss.Left, window, hm.View(keys.AnalysisKeyMap{}))
 }
 
 func (m model) analysisTitle() string {
-	title := lipgloss.NewStyle().Foreground(ilovetui.S.Primary).Bold(true).Render("Analysis")
+	title := lipgloss.NewStyle().Foreground(theme.S.Primary).Bold(true).Render("Analysis")
 	if len(m.findings) == 0 {
 		return title + mutedStyle.Render(" · nothing to report")
 	}
@@ -134,7 +135,7 @@ func (m model) renderPanelContent(fs int) string {
 	if p.ta.Value() == "" {
 		return mutedStyle.Render(panelPlaceholders[fs])
 	}
-	return ilovetui.ViewportView(&p.vp)
+	return bubbles.ViewportView(&p.vp)
 }
 
 func (m model) renderSecretContent() string {
@@ -191,9 +192,9 @@ func (m model) secretBody(spec string) string {
 
 func (m model) panelTitle(fs int, name string) string {
 	focused := m.focus == fs
-	c := ilovetui.S.Subtle
+	c := theme.S.Subtle
 	if focused {
-		c = ilovetui.S.Primary
+		c = theme.S.Primary
 	}
 	title := lipgloss.NewStyle().Foreground(c).Bold(focused).Render(name)
 	if focused && m.panels[fs].editing {
@@ -260,19 +261,14 @@ func (m model) payloadTitle() string {
 }
 
 func (m model) statusLine() string {
-	switch {
-	case m.errorMsg != "":
-		return lipgloss.NewStyle().MaxWidth(m.width).Render(errorStyle.Render(" " + m.errorMsg))
-	case m.successMsg != "":
-		return lipgloss.NewStyle().MaxWidth(m.width).Render(successStyle.Render(" " + m.successMsg))
-	case m.sigError != "" && m.sig != jwt.SigValid && m.sig != jwt.SigEmpty:
+	if m.sigError != "" && m.sig != jwt.SigValid && m.sig != jwt.SigEmpty {
 		return lipgloss.NewStyle().MaxWidth(m.width).Render(errorStyle.Render(" " + m.sigError))
 	}
 	return ""
 }
 
 func (m model) renderHelpBar() string {
-	hm := ilovetui.NewHelp()
+	hm := bubbles.NewHelp()
 	hm.SetWidth(m.width)
 	hm.ShowAll = m.showHelp
 
