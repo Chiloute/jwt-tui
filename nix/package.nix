@@ -4,7 +4,7 @@
 }:
 let
   pname = "jwt-tui";
-  version = "0.2.2"; # Tag
+  version = "0.2.3"; # Tag
   ldflags = [
     "-s"
     "-w"
