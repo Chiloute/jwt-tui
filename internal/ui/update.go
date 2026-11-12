@@ -210,6 +210,10 @@ func (m *model) refresh() {
 	result := jwt.VerifyToken(enc, key)
 	m.sig = result.Sig
 	m.temporal = result.Temporal
+	// only on change: refresh runs on every keystroke
+	if result.SigError != m.sigError && result.SigError != "" && result.Sig != jwt.SigValid && result.Sig != jwt.SigEmpty {
+		m.notify("signature", "Signature", result.SigError, notification.Error)
+	}
 	m.sigError = result.SigError
 	m.claims = result.Claims
 	m.keyResult = result

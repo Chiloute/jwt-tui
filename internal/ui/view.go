@@ -53,13 +53,7 @@ func (m model) renderMainView() string {
 	right := lipgloss.JoinVertical(lipgloss.Left, header, payload)
 	main := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
-	parts := []string{main}
-	if line := m.statusLine(); line != "" {
-		parts = append(parts, line)
-	}
-	parts = append(parts, m.renderHelpBar())
-
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return lipgloss.JoinVertical(lipgloss.Left, main, m.renderHelpBar())
 }
 
 func panelBorder(focused bool) lipgloss.Style {
@@ -254,13 +248,6 @@ func (m model) secretRole() string {
 
 func (m model) payloadTitle() string {
 	return m.panelTitle(panelPayload, "Payload") + mutedStyle.Render(" · ") + m.temporalSymbol()
-}
-
-func (m model) statusLine() string {
-	if m.sigError != "" && m.sig != jwt.SigValid && m.sig != jwt.SigEmpty {
-		return lipgloss.NewStyle().MaxWidth(m.width).Render(errorStyle.Render(" " + m.sigError))
-	}
-	return ""
 }
 
 func (m model) helpExtras() []key.Binding {

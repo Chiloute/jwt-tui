@@ -87,7 +87,7 @@ func initialModel(token, secret string) model {
 	m := model{
 		focus: panelEncoded,
 		edit:  jwt.EditOriginal,
-		notif: notification.New(notification.WithPosition(notification.BottomRight)),
+		notif: notification.New(notification.WithPosition(notification.TopRight)),
 		help:  helpbar.New(helpbar.WithToggle(keys.Keys.HelpToggle), helpbar.WithGlobal(keys.Short()...)),
 		// shortcut: floor matches the smallest size the layout tests cover; raise it together with them
 		size: minsize.New(20, 12),
@@ -163,15 +163,11 @@ func (m *model) recalcSizes() {
 	m.analysisVP.SetWidth(max(1, m.width-4))
 }
 
-// grid splits the screen into the 2x2 panel layout, minus the status and help bars.
+// grid splits the screen into the 2x2 panel layout, minus the help bar.
 func (m model) grid() (leftW, rightW, topH, bottomH int) {
 	leftW = m.width / 2
 	rightW = m.width - leftW
-	statusH := 0
-	if m.statusLine() != "" {
-		statusH = 1
-	}
-	availH := max(4, m.height-m.help.Height(m.helpExtras()...)-statusH)
+	availH := max(4, m.height-m.help.Height(m.helpExtras()...))
 	topH = availH / 2
 	return leftW, rightW, topH, availH - topH
 }

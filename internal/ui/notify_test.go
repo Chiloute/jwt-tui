@@ -38,3 +38,21 @@ func TestResignShowsToastInView(t *testing.T) {
 		t.Fatalf("Update must drain pending toasts")
 	}
 }
+
+func TestSignatureErrorIsAToastOnceAndNotAStatusLine(t *testing.T) {
+	m := initialModel(sampleJWT, "wrong-secret")
+	m.width, m.height = 100, 30
+	m.recalcSizes()
+
+	toasts := queuedToasts(&m)
+	if len(toasts) != 1 || toasts[0].Kind != notification.Error || toasts[0].Title != "Signature" {
+		t.Fatalf("queued toasts = %+v, want one signature error toast", toasts)
+	}
+	m.refresh() // same error again: must not re-notify
+	if again := queuedToasts(&m); len(again) != 0 {
+		t.Fatalf("unchanged error re-notified: %+v", again)
+	}
+	if view := stripANSI(m.View().Content); strings.Contains(view, m.sigError) {
+		t.Fatalf("signature error %q still rendered inline", m.sigError)
+	}
+}

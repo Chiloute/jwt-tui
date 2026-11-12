@@ -4,6 +4,8 @@ Terminal UI in Go to decode, edit and re-sign JSON Web Tokens, with a non-intera
 
 Four panels (Encoded, Header, Payload, Secret) stay in sync: editing any of them rebuilds the others and recomputes signature validity, expiry and edit state.
 
+![jwt-tui demo](.github/assets/demo.gif)
+
 ## Prerequisites
 
 - Go 1.26 to build from source (`go.mod` pins `go 1.26.4`)
